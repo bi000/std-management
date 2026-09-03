@@ -1,0 +1,119 @@
+# name of the workflow
+name: Release
+on:
+    workflow_dispatch:
+        inputs:
+            version:
+                description: 'Version to release'
+                required: true
+                type: string
+# minimum permission are required to run this workflow
+# actions: read   -> check CI workflow runs
+# contents: write -> create Git tag and GitHub Release
+permissions:
+    contents: write
+    actions: read
+jobs:
+    release:
+        name: Release
+        runs-on: ubuntu-latest
+        steps:
+            # checkout the code
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  ref: main
+                  fetch-depth: 0
+        
+      # --------------------------------------------------
+      # 2. Get the exact commit SHA of main
+      # --------------------------------------------------
+            - name: Get commit SHA
+              id: commit
+              run: |
+                SHA=$(git rev-parse HEAD)
+                echo "Commit SHA: $SHA"
+                echo "sha=$SHA" >> $GITHUB_OUTPUT
+      
+      # --------------------------------------------------
+      # 3. Validate Semantic Version
+      # --------------------------------------------------
+            - name: Validate Semantic Version
+              run: |
+                VERSION="${{ inputs.version}}"
+                if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                  echo "Error: Invalid semantic version format. Please use MAJOR.MINOR.PATCH format."
+                  echo "Version format should be like 1.0.0, 2.1.3, etc."
+                  exit 1
+                fi
+                echo "✅ Valid Semantic Version: $VERSION"
+      
+      # --------------------------------------------------
+      # 4. Check CI Workflow for this exact commit
+      # --------------------------------------------------
+            - name: Verify CI success
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                COMMIT_SHA: ${{ steps.commit.outputs.sha }}
+                # Get the workflow runs for the current repository and commit SHA
+              run: |
+                echo "Checking CI workflow runs for commit SHA: $COMMIT_SHA"
+                echo "Checking..."
+                # FIX: Command substitution preserves the complete JSON response for validation and jq output.
+                RUN=$(gh api \
+                  "/repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=$COMMIT_SHA&branch=main&status=completed&per_page=100" \
+                  --jq '.workflow_runs | map(select(.name == "CI Workflow" and .conclusion == "success")) | sort_by(.updated_at) | last')
+                if [ -z "$RUN" ] || [ "$RUN" = "null" ]; then
+                  echo "Error: No successful CI workflow run found for commit SHA: $COMMIT_SHA"
+                  exit 1
+                fi
+                echo "✅ Found successful CI workflow run for commit SHA: $COMMIT_SHA"
+
+                echo "$RUN" | jq '{
+                  id: .id,
+                  name: .name,
+                  status: .status,
+                  conclusion: .conclusion,
+                  head_sha: .head_sha,
+                  updated_at: .updated_at,
+                  html_url: .html_url
+                  }'
+    # --------------------------------------------------
+    # 5. Check whether the Git tag already exists
+    # --------------------------------------------------
+            - name: Check if Git tag exists
+              run: |
+                VERSION="${{ inputs.version}}"
+                # FIX: Release tags use the v-prefixed format (for example, v1.2.3).
+                TAG="v$VERSION"
+                if git rev-parse "refs/tags/$TAG" >/dev/null 2>&1; then
+                  echo "Error: Git tag '$TAG' already exists."
+                  exit 1
+                fi
+                echo "✅ Git tag '$TAG' does not exist. Proceeding to create the tag"
+    # --------------------------------------------------
+    # 6. Create Git tag
+    # --------------------------------------------------
+            - name: Create Git tag
+              run: |
+                VERSION="${{ inputs.version}}"
+                # FIX: Create and push the same v-prefixed tag used by the GitHub Release.
+                TAG="v$VERSION"
+                git config user.name "github-actions[bot]"
+                git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                git tag -a "$TAG" -m "Release $VERSION"
+                git push origin "$TAG"
+                echo "✅ Git tag '$TAG' created and pushed successfully."
+    # --------------------------------------------------
+    # 7. Create GitHub Release
+    # --------------------------------------------------
+            - name: Create GitHub Release
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                VERSION: ${{ inputs.version}}
+              run: |
+                TAG="v$VERSION"
+                gh release create "$TAG" \
+                  --title "$TAG" \
+                  --generate-notes 
+                echo "✅ GitHub Release created: $TAG"

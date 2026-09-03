@@ -1,0 +1,74 @@
+# This Yml file only checks the frontend and backend code for linting and testing. It does not build or push any docker images. The docker.yml file is responsible for building and pushing the docker images to Docker Hub.
+name: CI Workflow
+on:
+  push:
+    branches: ["main"]
+    paths: ["backend/**","frontend/**",".github/workflows/ci.yml"]
+  pull_request: 
+    branches: ["main"] # This is optional
+jobs:
+    # ===================
+    # Backend Testing jobs
+    # ===================
+    backend-test:
+        runs-on: ubuntu-latest
+        steps:
+            # step 1: Download your code
+          - name: Checkout code
+            uses: actions/checkout@v4
+        
+            # ================== CI Testing ========================
+            # step1: Install node.js version 20
+          - name: Setup Node.js
+            uses: actions/setup-node@v4
+            with:
+              node-version: '20'
+              cache: 'npm'      # cache npm dependencies to speed up the workflow
+              cache-dependency-path: backend/package-lock.json # path to package-lock.json for caching
+        
+            # step2: Install backend dependencies using ci (clean install)
+          - name: Install backend dependecies
+            run: npm ci
+            working-directory: ./backend
+        
+            # step:3 Run linting (only if lint script exists in package.json)
+          - name: Run Linting
+            run: npm run lint --if-present
+            working-directory: ./backend
+            # step4: Run backend tests
+          - name: Run backend tests
+            run: npm test --if-present
+            working-directory: ./backend
+
+    # ===================
+    # Frontend Testing jobs
+    # ===================
+    frontend-test:
+        runs-on: ubuntu-latest
+        steps:
+            # step 1: Download your code
+           - name: Checkout code
+             uses: actions/checkout@v4
+            # ================== CI Testing ========================
+            # step1: Install node.js version 20
+           - name: Setup Node.js
+             uses: actions/setup-node@v4
+             with:
+               node-version: '20'
+               cache: 'npm'      # cache npm dependencies to speed up the workflow
+               cache-dependency-path: frontend/package-lock.json # path to package-lock.json for caching
+            # step2: Install frontend dependencies using ci (clean install)
+           - name: Install frontend dependecies
+             run: npm ci
+             working-directory: ./frontend
+            # step:3 Run linting (only if lint script exists in package.json)
+           - name: Run Linting
+             run: npm run lint --if-present
+             working-directory: ./frontend
+            # step4: Run frontend tests
+           - name: Run frontend tests
+             run: npm test --if-present 
+             working-directory: ./frontend
+            # step 5: Run frontend build
+           - name: Run frontend build
+             run: npm run build

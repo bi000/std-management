@@ -1,0 +1,70 @@
+services:
+  # name of the service which will be used as hostname for the container
+  db:
+    # Official mysql image from dockerHub
+    image: mysql:8.0
+    # Container name
+    container_name: StdManageSys
+    # restart the container itself when it stops
+    restart: unless-stopped
+    # Environment variable for the mysql container
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD} 
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+    # mapping port 3306 of the container to 3306 of host machine(container to computer)
+    ports:
+      - "3306:3306"
+    # Volume(presistent data. Data does not lose even if container is removed/deleted iteself)
+    volumes:
+      - mysql_data:/var/lib/mysql
+    #health check 
+    healthcheck:
+      test: ["CMD", "mysqladmin","ping","-h","localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s 
+  
+  # ===========
+  # backend services
+  # ===========
+  backend:
+    # build image using Dockerfile created inside backend directory.
+    build: ../student-management/backend
+    container_name: stdManage_backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+    # important: set the DB_HOST to as "db" which is the service name of the mysql container. This is how the backend will connect to the database. 
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      PORT: 5000
+      # wait until db is ready
+    depends_on:
+      db:
+        condition: service_healthy
+  
+  # ==============
+  # frontend-composer
+  # ==============
+  frontend:
+  # build image using Dockerfile inside the frontend directory
+    build: ../student-management/frontend
+    container_name: stdManage_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+      
+# ==========
+# presistent volume
+# ==========
+volumes:
+  mysql_data:

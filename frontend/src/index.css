@@ -1,0 +1,18 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base app styles that apply everywhere, kept minimal since most
+   styling is done with Tailwind utility classes directly in components. */
+body {
+  @apply bg-paper text-ink-900 font-sans antialiased;
+}
+
+/* Keeps keyboard focus visible everywhere, since interactive elements
+   in this app aren't allowed to rely on hover alone for affordance. */
+:focus-visible {
+  outline: 2px solid theme('colors.gold.400');
+  outline-offset: 2px;
+}
