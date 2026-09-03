@@ -48,7 +48,8 @@ build/
 # =======================
 # Database 
 # ======================
-StdManagement/student-management/database
+StdManagement/student-management/database/schema.sql
+StdManagement/student-management/database/seed.sql
 
 # ========================
 # Logs
