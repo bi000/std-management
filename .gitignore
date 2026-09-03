@@ -48,7 +48,7 @@ build/
 # =======================
 # Database 
 # ======================
-stdManagement/student-management/database
+StdManagement/student-management/database
 
 # ========================
 # Logs
