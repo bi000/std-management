@@ -58,7 +58,7 @@ jobs:
 
       # Changed: security scan runs before the backend image is pushed to Docker Hub.
       - name: Scan backend image with Trivy
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.3.1
         with:
             image-ref: bishalmainali/std-backend:${{ steps.sha.outputs.short_sha }}
             format: table
@@ -89,7 +89,7 @@ jobs:
 
       # Changed: security scan runs before the frontend image is pushed to Docker Hub.
       - name: Scan frontend image with Trivy
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.3.1
         with:
             image-ref: bishalmainali/std-frontend:${{ steps.sha.outputs.short_sha }}
             format: table
