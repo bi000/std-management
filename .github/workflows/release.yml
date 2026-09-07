@@ -109,7 +109,8 @@ jobs:
     # --------------------------------------------------
             - name: Create GitHub Release
               env:
-                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                # Release Token is required to create a GitHub Release. It should be stored as a secret in the repository settings.
+                GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
                 VERSION: ${{ inputs.version}}
               run: |
                 TAG="v$VERSION"
