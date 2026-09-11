@@ -34,6 +34,7 @@ app.get('/api/health', async (req, res) => {
     await pool.query('SELECT 1');
     res.status(200).json({ success: true, message: 'API is running', database: 'connected' });
   } catch (err) {
+    console.error('DATABASE HEALTH CHECK ERROR:', err);
     res.status(500).json({ success: false, message: 'API is running but the database is unreachable', error: err.message });
   }
 });
